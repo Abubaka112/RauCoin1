@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Râu Coin</title>
+    <!-- Tích hợp Tailwind CSS để làm giao diện nhanh và đẹp -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tích hợp thư viện Telegram Mini App -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none; /* Standard syntax */
+            touch-action: manipulation;
+        }
+        .tap-button {
+            transition: transform 0.05s ease-in-out;
+        }
+        .tap-button:active {
+            transform: scale(0.95);
+        }
+        .floating-text {
+            position: absolute;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+            opacity: 0;
+            animation: float-up 1s ease-out forwards;
+            pointer-events: none;
+        }
+        @keyframes float-up {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-100px); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-between h-screen p-4 overflow-hidden">
+
+    <!-- Phần chính của ứng dụng -->
+    <main class="w-full max-w-sm flex flex-col items-center justify-center flex-grow text-center">
+        <!-- Thông tin người dùng -->
+        <div class="mb-4">
+            <p id="user-info" class="text-lg font-medium text-gray-300">Đang tải...</p>
+        </div>
+
+        <!-- Số dư Râu Coin -->
+        <div class="flex items-center justify-center mb-4 space-x-3">
+            <svg class="w-10 h-10 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 10v-1m0-6c-1.11 0-2.08-.402-2.599-1M12 16c-2.76 0-5-1.79-5-4s2.24-4 5-4 5 1.79 5 4-2.24 4-5 4z"></path></svg>
+            <h1 id="balance" class="text-5xl font-black">0</h1>
+        </div>
+        
+        <!-- Nút đào coin chính -->
+        <div id="tap-container" class="relative w-64 h-64 md:w-72 md:h-72 my-8">
+            <button id="tap-button" class="tap-button w-full h-full bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg active:shadow-2xl">
+                <!-- Icon Râu -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-32 h-32 text-gray-900" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6 20c0-3.309 2.691-6 6-6s6 2.691 6 6h-12zm-4-6c0-4.411 3.589-8 8-8s8 3.589 8 8c-2.053 0-3.887-1.03-5.064-2.598-1.551 1.054-3.36 1.598-5.269 1.598-.222 0-.441-.008-.667-.024z"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Thanh năng lượng -->
+        <div class="w-full px-4">
+            <div class="flex justify-between items-center text-lg mb-1">
+                <span class="font-bold">⚡ Năng lượng</span>
+                <span id="energy-level" class="font-bold">1000 / 1000</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-4">
+                <div id="energy-bar" class="bg-gradient-to-r from-green-400 to-blue-500 h-4 rounded-full" style="width: 100%"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Thanh chức năng dưới cùng -->
+    <footer class="w-full max-w-sm grid grid-cols-2 gap-4">
+        <button id="invite-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+            🤝 Mời bạn bè
+        </button>
+        <button id="wallet-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg shadow-md transition-transform transform hover:scale-105">
+            💼 Ví Râu Coin
+        </button>
+    </footer>
+
+    <!-- Modal mời bạn bè -->
+    <div id="invite-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-2xl p-6 w-full max-w-md text-center shadow-xl">
+            <h2 class="text-2xl font-bold mb-4">Mời bạn bè và nhận thưởng!</h2>
+            <p class="text-gray-300 mb-6">Chia sẻ link bên dưới. Bạn sẽ nhận được Râu Coin cho mỗi người bạn tham gia.</p>
+            <div class="bg-gray-900 p-3 rounded-lg mb-4">
+                <p id="referral-link" class="text-yellow-400 break-all">https://t.me/YourRauCoinBot?start=...
+                </p>
+            </div>
+            <button id="copy-link-btn" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold w-full py-3 rounded-lg mb-4">Sao chép link</button>
+            <button id="close-modal-btn" class="text-gray-400 hover:text-white w-full py-2">Đóng</button>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand(); // Mở rộng Mini App ra toàn màn hình
+
+            // --- Các biến trạng thái của game ---
+            let balance = 0;
+            let maxEnergy = 1000;
+            let currentEnergy = 1000;
+            let tapsPerClick = 1;
+            let energyRegenRate = 1; // Năng lượng hồi mỗi giây
+
+            // --- Lấy các phần tử trên trang ---
+            const balanceEl = document.getElementById('balance');
+            const tapButton = document.getElementById('tap-button');
+            const tapContainer = document.getElementById('tap-container');
+            const energyLevelEl = document.getElementById('energy-level');
+            const energyBar = document.getElementById('energy-bar');
+            const userInfoEl = document.getElementById('user-info');
+            
+            const inviteBtn = document.getElementById('invite-btn');
+            const inviteModal = document.getElementById('invite-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const copyLinkBtn = document.getElementById('copy-link-btn');
+            const referralLinkEl = document.getElementById('referral-link');
+
+
+            // --- Khởi tạo thông tin người dùng ---
+            if (tg.initDataUnsafe.user) {
+                const user = tg.initDataUnsafe.user;
+                const userId = user.id;
+                userInfoEl.innerText = `Xin chào, ${user.first_name}!`;
+                
+                // Tạo link giới thiệu
+                const botUsername = 'YourRauCoinBot'; // THAY TÊN BOT CỦA BẠN VÀO ĐÂY
+                referralLinkEl.innerText = `https://t.me/${botUsername}?start=${userId}`;
+                
+                // TODO: Gọi API backend để lấy dữ liệu thực tế của người dùng (balance, energy,...)
+                // loadUserData(userId); 
+            } else {
+                userInfoEl.innerText = "Chơi với tư cách khách";
+                referralLinkEl.innerText = "Không thể tạo link giới thiệu.";
+            }
+
+            // --- Hàm cập nhật giao diện ---
+            function updateUI() {
+                balanceEl.innerText = Math.floor(balance);
+                energyLevelEl.innerText = `${Math.floor(currentEnergy)} / ${maxEnergy}`;
+                energyBar.style.width = `${(currentEnergy / maxEnergy) * 100}%`;
+            }
+
+            // --- Xử lý sự kiện chạm ---
+            function handleTap(event) {
+                if (currentEnergy >= tapsPerClick) {
+                    currentEnergy -= tapsPerClick;
+                    balance += tapsPerClick;
+
+                    // Rung nhẹ
+                    if (tg.HapticFeedback) {
+                        tg.HapticFeedback.impactOccurred('light');
+                    }
+                    
+                    // Tạo hiệu ứng số bay lên
+                    const x = event.clientX || event.touches[0].clientX;
+                    const y = event.clientY || event.touches[0].clientY;
+                    createFloatingText(tapsPerClick, x, y);
+
+                    updateUI();
+                }
+            }
+
+            tapButton.addEventListener('click', handleTap);
+            // Hỗ trợ cả touch event cho mobile
+            tapButton.addEventListener('touchstart', (e) => {
+                e.preventDefault(); // Ngăn hành vi mặc định của trình duyệt
+                handleTap(e);
+            });
+
+
+            function createFloatingText(amount, x, y) {
+                const text = document.createElement('div');
+                text.className = 'floating-text';
+                text.innerText = `+${amount}`;
+                text.style.left = `${x - 20}px`;
+                text.style.top = `${y - 40}px`;
+                tapContainer.appendChild(text);
+                setTimeout(() => {
+                    text.remove();
+                }, 1000);
+            }
+
+            // --- Hồi năng lượng ---
+            setInterval(() => {
+                if (currentEnergy < maxEnergy) {
+                    currentEnergy = Math.min(maxEnergy, currentEnergy + energyRegenRate);
+                    updateUI();
+                }
+            }, 1000);
+            
+            // --- Xử lý Modal mời bạn bè ---
+            inviteBtn.addEventListener('click', () => {
+                inviteModal.classList.remove('hidden');
+            });
+            
+            closeModalBtn.addEventListener('click', () => {
+                inviteModal.classList.add('hidden');
+            });
+
+            copyLinkBtn.addEventListener('click', () => {
+                navigator.clipboard.writeText(referralLinkEl.innerText).then(() => {
+                    copyLinkBtn.innerText = 'Đã sao chép!';
+                    tg.HapticFeedback.notificationOccurred('success');
+                    setTimeout(() => {
+                        copyLinkBtn.innerText = 'Sao chép link';
+                    }, 2000);
+                });
+            });
+
+            // --- Khởi tạo ---
+            updateUI();
+            
+            // TODO: Định kỳ gọi API để lưu tiến trình của người dùng lên server
+            // setInterval(saveProgress, 10000); // Ví dụ: lưu mỗi 10 giây
+        });
+    </script>
+</body>
+</html>
